@@ -1,0 +1,15 @@
+[Unit]
+Description=Image Comparator Master Daemon
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/usr/share/image-comparator-daemon
+ExecStart=/usr/bin/bash -c './comparator-daemon.lisp'
+RestartSec=3
+User=image-comparator-daemon
+Group=image-comparator-daemon
+
+[Install]
+WantedBy=multi-user.target

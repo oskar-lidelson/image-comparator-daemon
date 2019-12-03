@@ -1,3 +1,21 @@
+# 0. Installation and Setup
+
+There's a makefile included which will automatically attempt to
+install all required dependencies.
+
+But if you prefer to do it manually: 
+
+$ sudo make install-sbcl (Needs root privileges)
+
+This calls apt-get or dnf to install sbcl. That's the only dependency.
+
+$ make install-quicklisp (Does not need root privileges)
+
+This first part installs quicklisp, which is essentially the lisp
+package management system. It has a dependency on install-sbcl, but if
+you run that first, it won't run.
+
+
 # 1. My Thought Process
 
 ## 1.1 Similarity Measure
