@@ -2,9 +2,9 @@
 #CONFIGURATION/SHORTHAND 
 #========================================
 quicklisp_url="https://beta.quicklisp.org/quicklisp.lisp"
-quicklisp_install_script="(quicklisp-quickstart:install)"
+quicklisp_install_script='(progn () (quicklisp-quickstart:install :path "quicklisp.tmp")(exit))'
 
-all: install-quicklisp create-user install-code install-systemd-config
+all: install-quicklisp create-user install-code install-systemd-config create-directories
 
 #========================================
 #INSTALLATION
@@ -16,7 +16,7 @@ install-dependencies: install-quicklisp
 # Pull the latest quicklisp dist and install it. ToDo: Maybe verify, but then I'd need to keep on top of the hash or key
 install-quicklisp: install-sbcl
 	@echo "Installing quicklisp. "
-	if [ ! -d ~/quicklisp ] ; then \
+	if [ ! -d /usr/share/image-comparator-daemon/quicklisp ] ; then \
 		wget -q -O/tmp/quicklisp.lisp $(quicklisp_url) && \
 		sbcl --load /tmp/quicklisp.lisp --eval $(quicklisp_install_script); \
 	fi;
@@ -38,6 +38,10 @@ create-user:
 install-code:
 	mkdir -p /usr/share/image-comparator-daemon;
 	cp -rv src/* /usr/share/image-comparator-daemon;
+	cp -rv quicklisp.tmp /usr/share/image-comparator-daemon/quicklisp;
+	rm -rf ./quicklisp.tmp;
+# Set permissions in a heavy handed way:
+	chown image-comparator-daemon:image-comparator-daemon /usr/share/image-comparator-daemon -R;
 
 install-systemd-config:
 	cp conf/image-comparator-daemon.service /etc/systemd/system/;
@@ -47,6 +51,12 @@ install-systemd-config:
 	systemctl daemon-reload;
 	systemctl start image-comparator-daemon;
 	systemctl enable image-comparator-daemon;
+
+create-directories:
+	mkdir -p /mnt/image-comparator;
+	chown root:image-comparator-daemon /mnt/image-comparator;
+# You must be in the image-comparator-daemon group to send config files to this system:
+	chmod g+rwx /mnt/image-comparator;
 
 #========================================
 #UNINSTALLATION
