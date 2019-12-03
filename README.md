@@ -1,8 +1,6 @@
-1. My Thought Process
-=====================
+# 1. My Thought Process
 
-1.1 Similarity Measure
-======================
+## 1.1 Similarity Measure
 
 First, naturally, the mathematician in me went straight to the image
 similarity algorithm, since that's the most interesting part.
@@ -24,8 +22,7 @@ shelved this one as something to think about later.
 
 So I came up with these:
 
-1.1.1 The Smudge Test
-===================
+### 1.1.1 The Smudge Test
 
 For this test, I take a disc integral centered on each pixel in the
 image, and store that value. I do this for both images. The result is
@@ -40,8 +37,7 @@ two images would look if you took off your glasses.
 As a bonus, you can tune it by specifying how large the disks should
 be. I set that as an optional 'fuzziness-value' parameter.
 
-1.1.2 The Color Space Test
-========================
+## 1.1.2 The Color Space Test
 
 For this test, I break the color space into partitions, and count the
 number of pixels for each image that fall into each. The similarity
@@ -54,8 +50,7 @@ colors, but pretty terrible at detecting much more than that.
 As before, the number of partitions you split the space into is
 configurable, and that's an optional 'fuzziness' parameter.
 
-1.2 Architecture
-================
+## 1.2 Architecture
 
 Next, I thought about how I would want the system to work if I were
 Bjorn. 
@@ -82,8 +77,7 @@ access problem, and solves the disk space problem, too. There's no way
 to tell if Bjorn's home system has a large disk. Now the office system
 can store his mega-sized images for him.
 
-1.2.1 The Trivial Solution
-==========================
+### 1.2.1 The Trivial Solution
 
 It's always good, I think, to start with the trivial solution.
 
@@ -93,8 +87,7 @@ there, then operating on each image pair in sequence before dropping
 the results into an output directory. Simple. Since it's just disk
 based it can be a pure shell script.
 
-1.2.2 Bjorn Is Insane
-=====================
+### 1.2.2 Bjorn Is Insane
 
 Next, I considered, what if Bjorn wanted to compare fifty billion
 images? Why? Well, I don't know. Who knows what he's thinking.
@@ -104,8 +97,7 @@ files. Since I'm already going to be using a network mount for the
 disk, there's no harm in adding more machines to the cluster if
 necessary. So I came up with the idea of worker systems.
 
-1.2.2.1 MicroService Worker
-===========================
+#### 1.2.2.1 MicroService Worker
 
 The Worker Systems are microservices that sit on the network-mounted
 directory and accept tasks from the master over the network.
@@ -118,8 +110,7 @@ debugging.
 Now all I have to do is figure out how to return the task result (the
 time taken, and the similarity score).
 
-1.2.2.2 Master Endpoint for Task Reporting
-==========================================
+#### 1.2.2.2 Master Endpoint for Task Reporting
 
 The master process, I decided, would generate a unique task ID for
 each task it sends out, recording it in a little database (Sqlite,
@@ -131,8 +122,7 @@ are finished' line, too. Just a simple database count query.
 
 ..but now I need to design the database.
 
-1.2.2.3 Database Structure
-==========================
+#### 1.2.2.3 Database Structure
 
 At the highest level the image comparator reads in a new CSV file and
 starts working on it. I'll call this a 'workload'.
@@ -152,8 +142,7 @@ progress'. If there are none left, the task is finished, and I can
 write those task results to disk before cleaning that workload and
 task from the database.
 
-1.3 Language
-============
+## 1.3 Language
 
 I actually started writing the code in Lisp. It's the fastest language
 I have for developing in, and I figure that as long as I comment it
@@ -165,8 +154,7 @@ After all, from the commented code, I can then rewrite it quickly in
 the common language. (This is my standard coding procedure. Prototype
 in Lisp, rewrite in C++ for performance).
 
-1.4 Support Structure
-=====================
+## 1.4 Support Structure
 
 Since it's a daemon, I figured I'll write a systemd unit file for
 it. Straightforward stuff. That should all be in the setup
