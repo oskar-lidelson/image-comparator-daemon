@@ -185,6 +185,7 @@
 	 (max (num-pixels-in-array A) (num-pixels-in-array B))))))
 
 (defun smudge-distance (image-a image-b &key (bit-depth-a 8) (bit-depth-b 8))
+  ;;ToDo: Implement this.
   1.0)
 
 (defun calculate-similarity-score (image-a image-b &key (similarity-type :color-space))
