@@ -5,6 +5,7 @@ quicklisp_url="https://beta.quicklisp.org/quicklisp.lisp"
 quicklisp_install_script='(progn () (quicklisp-quickstart:install :path "quicklisp.tmp")(exit))'
 
 all:
+	@echo "Nothing to do. Try make install."
 
 install: install-quicklisp install-imagemagick create-user install-code install-systemd-config install-worker-systemd-config create-directories
 
