@@ -6,7 +6,7 @@ quicklisp_install_script='(progn () (quicklisp-quickstart:install :path "quickli
 
 all:
 
-install: install-quicklisp create-user install-code install-systemd-config create-directories
+install: install-quicklisp install-imagemagick create-user install-code install-systemd-config create-directories
 
 #========================================
 #INSTALLATION
@@ -32,6 +32,16 @@ install-sbcl:
 		which apt-get && apt-get install sbcl -y || true; \
 	} || true;
 
+# Detect if imagemagick is installed. If it is, do nothing. Otherwise, detect
+# if we're on a Red Hat based or Debian based distro, and use the
+# appropriate package manager.
+install-imagemagick:
+	which convert || { \
+		which dnf && dnf install imagemagick || true; \
+		which apt-get && apt-get install imagemagick -y || true; \
+	} || true;
+
+
 # We require the user+group 'image-comparator-daemon' exists, but we don't need a homedir or a shell.
 create-user:
 	useradd -M image-comparator-daemon -s /usr/sbin/nologin || true;
@@ -40,7 +50,7 @@ create-user:
 install-code:
 	mkdir -p /usr/share/image-comparator-daemon;
 	cp -rv src/* /usr/share/image-comparator-daemon;
-	cp -rv quicklisp.tmp /usr/share/image-comparator-daemon/quicklisp;
+	if [ -d quicklisp.tmp ] ; then cp -rv quicklisp.tmp /usr/share/image-comparator-daemon/quicklisp; fi;
 	rm -rf ./quicklisp.tmp;
 # Set permissions in a heavy handed way:
 	chown image-comparator-daemon:image-comparator-daemon /usr/share/image-comparator-daemon -R;
