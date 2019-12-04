@@ -147,9 +147,11 @@
   "Valid similarity-types are: :color-space, :smudge, ..."
   (let ((jump-table
 	  (list :color-space #'color-space-distance
-		:smudge #'smudge-distance)))
+		:smudge #'smudge-distance))
+	(image-a-data (png-read:image-data (png-read:read-png-file image-a)))
+	(image-b-data (png-read:image-data (png-read:read-png-file image-b))))
     ;;ToDo: Open PNG here, and pass only raw PNG object.
-    (funcall (getf similarity-type jump-table) image-a image-b)))
+    (funcall (getf jump-table similarity-type) image-a-data image-b-data)))
 
 (defun operate-on-next-available-task ()
   ;;Find the next waiting task:
