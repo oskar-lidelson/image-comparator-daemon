@@ -202,6 +202,21 @@
 	     :bit-depth-a bit-depth-a
 	     :bit-depth-b bit-depth-b)))
 
+(defun notify-master-of-successful-compare (task score elapsed-time)
+  (drakma:http-request (format nil "http://~a:~a/task/report"
+			       (worker-config-master-hostname *worker-config*)
+			       (worker-config-master-port *worker-config*))
+		       :method :post
+		       :parameters
+		       (list
+			(cons "auth-token" "ToDo")
+			;;Push the task over wholesale.
+			(cons "task-uid" (format nil "~S" (task-descriptor-uid task)))
+			(cons "similarity-score" (format nil "~A" (float score)))
+			(cons "elapsed-time" (format nil "~A" (float elapsed-time)))
+			;;ToDo: Fill this in if it exists.
+			(cons "error-message" ""))))
+
 (defun operate-on-next-available-task ()
   ;;Find the next waiting task:
 
@@ -210,20 +225,27 @@
     (handler-case
 	(when task
 	  ;;ToDo: Start benchmark timer. (start-time = now())
-	  (debug-print "Operating on task: ~A~%" task)
+	  (let ((begin-time (get-internal-real-time)))
+	    (debug-print "Operating on task: ~A~%" task)
 
-	  ;;Step 1: Convert both sides to PNG:
+	    ;;Step 1: Convert both sides to PNG:
 	  ;;;ToDo: 'convert' binary path should be in the config.
-	  (sb-ext:run-program "/usr/bin/convert" (list (task-descriptor-image-a task) "/tmp/image-a.png") :wait T)
-	  (sb-ext:run-program "/usr/bin/convert" (list (task-descriptor-image-b task) "/tmp/image-b.png") :wait T)
+	    (sb-ext:run-program "/usr/bin/convert" (list (task-descriptor-image-a task) "/tmp/image-a.png")
+				:wait T)
+	    (sb-ext:run-program "/usr/bin/convert" (list (task-descriptor-image-b task) "/tmp/image-b.png")
+				:wait T)
 
-	  ;;ToDo: Resize both images to be identical.
+	    ;;ToDo: Resize both images to be identical.
 
-	  (let ((score (calculate-similarity-score "/tmp/image-a.png" "/tmp/image-b.png")))
-	    (debug-print "score: ~A~%" score))
-	  
-	  ;;ToDo: End benchmark timer: (end-time = now(), elapsed = end-time - start-time).
-	  )
+	    (let* ((score (calculate-similarity-score "/tmp/image-a.png" "/tmp/image-b.png"))
+		   (end-time (get-internal-real-time))
+		   (elapsed-time (- end-time begin-time)))
+	      (debug-print "score: ~A~%" score)
+
+	      ;;ToDo: End benchmark timer: (end-time = now(), elapsed = end-time - start-time).
+
+	      ;;Now, we need to call back to the master and tell them what we've found:
+	      (notify-master-of-successful-compare task score elapsed-time))))
       
       (T (error)
 	(log-error (format nil "Unhandled error operating on task: ~A~%" error))))))
