@@ -7,6 +7,13 @@
   (when (probe-file quicklisp-init)
     (load quicklisp-init)))
 
+;;If it still hasn't loaded, attempt to load it from the default location in home directory: (For development)
+#-quicklisp
+(let ((quicklisp-init "~/quicklisp/setup.lisp"))
+  (when (probe-file quicklisp-init)
+    (load quicklisp-init)))
+
+
 (ql:quickload :hunchentoot :silent T) ;;Used for setting up the HTTP server for receiving task results.
 (ql:quickload :cl-csv :silent T) ;;Used for parsing the incoming config files.
 (ql:quickload :drakma :silent T) ;;Used for outgoing HTTP requests to push tasks to workers.
