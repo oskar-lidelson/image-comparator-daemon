@@ -6,7 +6,10 @@ quicklisp_install_script='(progn () (quicklisp-quickstart:install :path "quickli
 
 all:
 
-install: install-quicklisp install-imagemagick create-user install-code install-systemd-config create-directories
+install: install-quicklisp install-imagemagick create-user install-code install-systemd-config install-worker-systemd-config create-directories
+
+# Install everything, then disable the master server.
+install-worker: install uninstall-systemd-config
 
 #========================================
 #INSTALLATION
@@ -64,6 +67,15 @@ install-systemd-config:
 	systemctl start image-comparator-daemon;
 	systemctl enable image-comparator-daemon;
 
+install-worker-systemd-config:
+	cp conf/image-comparator-worker.service /etc/systemd/system/;
+# Double check the permissions:
+	chmod 644 /etc/systemd/system/image-comparator-worker.service;
+
+	systemctl daemon-reload;
+	systemctl start image-comparator-worker;
+	systemctl enable image-comparator-worker;
+
 create-directories:
 	mkdir -p /mnt/image-comparator;
 	chown root:image-comparator-daemon /mnt/image-comparator;
@@ -74,7 +86,7 @@ create-directories:
 #UNINSTALLATION
 #========================================
 
-uninstall: uninstall-code delete-user uninstall-systemd-config
+uninstall: uninstall-systemd-config uninstall-systemd-worker-config uninstall-code delete-user
 	@echo "Done"
 
 delete-user:
@@ -87,4 +99,10 @@ uninstall-systemd-config:
 	systemctl disable image-comparator-daemon;
 	systemctl stop image-comparator-daemon;
 	rm -f /etc/systemd/system/image-comparator-daemon.service;
+	systemctl daemon-reload;
+
+uninstall-systemd-worker-config:
+	systemctl disable image-comparator-worker;
+	systemctl stop image-comparator-worker;
+	rm -f /etc/systemd/system/image-comparator-worker.service;
 	systemctl daemon-reload;
