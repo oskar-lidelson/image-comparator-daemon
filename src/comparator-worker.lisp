@@ -126,21 +126,30 @@
 		(associated-workload-id (second row))
 		(uid (third row))
 		(image-a (fourth row))
-		(image-b (fifth row))))
-	  ;;Generate a task:
-	  (make-task-descriptor
-	   :uid uid
-	   :associated-workload-id associated-workload-id
-	   :image-a image-a
-	   :image-b image-b)))
+		(image-b (fifth row)))
+	    ;;Generate a task:
+	    (make-task-descriptor
+	     :uid uid
+	     :associated-workload-id associated-workload-id
+	     :image-a image-a
+	     :image-b image-b))))
     (T (error)
       (log-error (format nil "Unhandled error fetching next waiting task: ~A~%" error))
       nil)))
 
+(defun color-space-distance (image-a image-b)
+  1.0)
+
+(defun smudge-distance (image-a image-b)
+  1.0)
+
 (defun calculate-similarity-score (image-a image-b &key (similarity-type :color-space))
   "Valid similarity-types are: :color-space, :smudge, ..."
-  
-  )
+  (let ((jump-table
+	  (list :color-space #'color-space-distance
+		:smudge #'smudge-distance)))
+    ;;ToDo: Open PNG here, and pass only raw PNG object.
+    (funcall (getf similarity-type jump-table) image-a image-b)))
 
 (defun operate-on-next-available-task ()
   ;;Find the next waiting task:
