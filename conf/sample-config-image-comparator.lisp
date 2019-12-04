@@ -1,7 +1,6 @@
 (defparameter *config*
   (make-config
    :root-directory "/mnt/image-comparator"
-   :root-directory "/mnt/image-comparator"
 
    ;;Config files dropped into this directory are ingested and processed:
    :config-incoming-subdir "config.incoming"
