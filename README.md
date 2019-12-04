@@ -15,6 +15,10 @@ matching the config struct declarations in src/shared.lisp
 
 You can also copy the sample configs and edit those. They're in the 'conf' subdirectory of this repository.
 
+The system runs from /usr/share/image-comparator-daemon. The
+installation script will automatically copy all code there and point
+the systemd service files to it.
+
 # -1. Usage
 
 This service by default creates a /mnt/image-comparator/ directory.
