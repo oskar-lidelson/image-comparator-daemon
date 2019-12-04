@@ -137,21 +137,69 @@
       (log-error (format nil "Unhandled error fetching next waiting task: ~A~%" error))
       nil)))
 
-(defun color-space-distance (image-a image-b)
-  1.0)
+(defun power-series-expand (coefficients x)
+  (let ((result 0)
+	(x^k 1))
+    (dolist (i coefficients)
+      (incf result (* x^k i))
+      (setf x^k (* x x^k)))
+    result))
 
-(defun smudge-distance (image-a image-b)
+(defun uniform-partition-number (partition-size x)
+  "Determine which partition x belongs to."
+  (floor (/ x partition-size)))
+(defun build-colorspace-partition (bit-depth pixel-array &key (num-partitions 100))
+  ;;The maximum color value I can possibly have in this image:
+  (let* ((max-value (power-series-expand (list 255 255 255) (expt 2 bit-depth)))
+	 (partition-size (/ (+ 1 max-value) num-partitions))
+	 (partition-counts (make-array num-partitions :initial-element 0)))
+    
+    (dotimes (y (array-dimension pixel-array 0))
+      (dotimes (x (array-dimension pixel-array 1))
+	;;ToDo: Greyscale images really ruin this..
+	;;Combine the three values into a single integer. The bit depth tells us how large the 'base' is.
+	(let ((color-at-point
+		(power-series-expand
+		 (list (aref pixel-array y x 0)
+		       (aref pixel-array y x 1)
+		       (aref pixel-array y x 2))
+		 (expt 2 bit-depth))))
+	  ;;Increment the count at this partition:
+	  (incf (aref partition-counts (uniform-partition-number partition-size color-at-point))))))
+    partition-counts))
+
+(defun num-pixels-in-array (A) (* (array-dimension A 0) (array-dimension A 1)))
+
+(defun color-space-distance (image-a image-b &key (bit-depth-a 8) (bit-depth-b 8))
+  (let ((A (png-read:image-data image-a))
+	(B (png-read:image-data image-b)))
+    ;;A and B are both arrays of triples (R,G,B) representing pixel values
+    ;;Start on image A:
+    (let* ((c-a (build-colorspace-partition bit-depth-a A))
+	   (c-b (build-colorspace-partition bit-depth-b B))
+	   (total-deltas (reduce #'+
+				 (map 'list (lambda (a b) (abs (- a b))) c-a c-b))))
+      ;;Normalize the deltas:
+      ;;The maximum value they can have is max(x1y1, x2y2)
+      (/ total-deltas
+	 (max (num-pixels-in-array A) (num-pixels-in-array B))))))
+
+(defun smudge-distance (image-a image-b &key (bit-depth-a 8) (bit-depth-b 8))
   1.0)
 
 (defun calculate-similarity-score (image-a image-b &key (similarity-type :color-space))
   "Valid similarity-types are: :color-space, :smudge, ..."
-  (let ((jump-table
-	  (list :color-space #'color-space-distance
-		:smudge #'smudge-distance))
-	(image-a-data (png-read:image-data (png-read:read-png-file image-a)))
-	(image-b-data (png-read:image-data (png-read:read-png-file image-b))))
+  (let* ((jump-table
+	   (list :color-space #'color-space-distance
+		 :smudge #'smudge-distance))
+	 (image-a-state (png-read:read-png-file image-a))
+	 (image-b-state (png-read:read-png-file image-b))
+	 (bit-depth-a (png-read:bit-depth image-a-state))
+	 (bit-depth-b (png-read:bit-depth image-b-state)))
     ;;ToDo: Open PNG here, and pass only raw PNG object.
-    (funcall (getf jump-table similarity-type) image-a-data image-b-data)))
+    (funcall (getf jump-table similarity-type) image-a-state image-b-state
+	     :bit-depth-a bit-depth-a
+	     :bit-depth-b bit-depth-b)))
 
 (defun operate-on-next-available-task ()
   ;;Find the next waiting task:
