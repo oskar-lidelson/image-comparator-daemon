@@ -1,3 +1,5 @@
+(in-package :image-comparator)
+
 ;;====================
 ;;Load dependencies:
 ;;====================
@@ -19,6 +21,11 @@
 (ql:quickload :drakma :silent T) ;;Used for outgoing HTTP requests to push tasks to workers.
 (ql:quickload :sqlite :silent T) ;;Used for storing Task and Workload information.
 (ql:quickload :png-read :silent T) ;;Used for reading PNG images for similarity distance calculation
+
+;;====================
+;;Set our random state
+;;====================
+(setf *random-state* (make-random-state t))
 
 ;;====================
 ;;Config file structure definition
@@ -123,6 +130,10 @@ the directories are, as well as its worker processes.
 (defstruct worker-config
   "Config definitions for worker processes"
 
+  ;;Where results are reported to:
+  (master-hostname "localhost")
+  (master-port *default-master-port*)
+  
   (db "image-comparator-worker.sqlite3")
   (http-listen-port *default-worker-port*))
 
