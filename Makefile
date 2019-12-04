@@ -64,7 +64,7 @@ install-systemd-config:
 	chmod 644 /etc/systemd/system/image-comparator-daemon.service;
 
 	systemctl daemon-reload;
-	systemctl start image-comparator-daemon;
+	systemctl restart image-comparator-daemon;
 	systemctl enable image-comparator-daemon;
 
 install-worker-systemd-config:
@@ -73,7 +73,7 @@ install-worker-systemd-config:
 	chmod 644 /etc/systemd/system/image-comparator-worker.service;
 
 	systemctl daemon-reload;
-	systemctl start image-comparator-worker;
+	systemctl restart image-comparator-worker;
 	systemctl enable image-comparator-worker;
 
 create-directories:
