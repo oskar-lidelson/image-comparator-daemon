@@ -18,7 +18,7 @@
 (ql:quickload :cl-csv :silent T) ;;Used for parsing the incoming config files.
 (ql:quickload :drakma :silent T) ;;Used for outgoing HTTP requests to push tasks to workers.
 (ql:quickload :sqlite :silent T) ;;Used for storing Task and Workload information.
-(ql:quickload :zpng :silent T) ;;Used for reading PNG images for similarity distance calculation
+(ql:quickload :png-read :silent T) ;;Used for reading PNG images for similarity distance calculation
 
 ;;====================
 ;;Config file structure definition
