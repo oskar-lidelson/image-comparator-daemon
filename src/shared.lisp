@@ -18,6 +18,7 @@
 (ql:quickload :cl-csv :silent T) ;;Used for parsing the incoming config files.
 (ql:quickload :drakma :silent T) ;;Used for outgoing HTTP requests to push tasks to workers.
 (ql:quickload :sqlite :silent T) ;;Used for storing Task and Workload information.
+(ql:quickload :zpng :silent T) ;;Used for reading PNG images for similarity distance calculation
 
 ;;====================
 ;;Config file structure definition
@@ -175,3 +176,31 @@ the directories are, as well as its worker processes.
 		     :if-does-not-exist :create
 		     :if-exists :append)
       (format stream "~A~%" str))))
+
+(defun file-exists (filename)
+  "Returns non-NIL if file exists."
+  (probe-file (pathname filename)))
+(defun file-doesnt-exist (filename)
+  "Shorthand."
+  (not (file-exists (pathname filename))))
+
+(defun generate-task-uid (&key (num-digits 20))
+  "Generate a sensible UID which can be natively handled as an integer in Lisp"
+  ;;It's important to use 10 here as the base so that it stays in integer-land.
+  (write-to-string (random (expt 10 num-digits))))
+
+(defun incoming-subdir-wildcard (&key (file-type "csv"))
+  "Construct the wildcard path which globs to all incoming config files of the specified file type.
+   ie. The default value for this should look something like /mnt/.../config.incoming/*.csv"
+  (format nil "~a/~a/*.~a"
+	  (config-root-directory *config*)
+	  (config-config-incoming-subdir *config*)
+	  file-type))
+
+(defun basename (path)
+  "Emulates the UNIX basename command. (basename(/tmp/x/y) => y)"
+  (format nil "~a~a~a"
+	  (pathname-name path)
+	  (if (pathname-type path) "." "")
+	  (if (pathname-type path)
+	      (pathname-type path) "")))
