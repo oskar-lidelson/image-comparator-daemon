@@ -90,49 +90,8 @@
 		  ")"))))
 
 ;;====================
-;;Utilities
+;;Work functions
 ;;====================
-
-(defmacro debug-print (&rest code)
-  "Shorthand macro for printing if the global config 'debug-mode' is set to T. Otherwise does nothing."
-  `(when (config-debug-mode *config*) (format T ,@code)))
-
-
-(defun get-db-path ()
-  "Get the absolute path to the database"
-  (pathname (format nil "~a/~a"
-		    (config-root-directory *config*)
-		    (config-db *config*))))
-
-(defun get-error-log-path ()
-  "Get the absolute path to the error log"
-  (pathname (format nil "~a/~a/~a"
-		    (config-root-directory *config*)
-		    (config-output-subdir *config*)
-		    (config-error-log *config*))))
-
-(defun get-processing-subdir-path ()
-  "Get the absolute path to the processing subdir"
-  (pathname (format nil "~a/~a"
-		    (config-root-directory *config*)
-		    (config-processing-subdir *config*))))
-
-(defun log-error (error)
-  "Given an error, write it to our error log and carry on.
-
-   If it's fatal, the caller will already have begun unwinding."
-  (let ((str
-	  (with-output-to-string (stream)
-	    (format stream "========================================~%")
-	    (format stream " ~A~%" error)
-	    (format stream "========================================~%"))))
-    (debug-print str)
-    (with-open-file (stream
-		     (get-error-log-path)
-		     :direction :output
-		     :if-does-not-exist :create
-		     :if-exists :append)
-      (format stream "~A~%" str))))
 
 (defun mkdir-or-die (directory mode &key (relative nil))
   "Given a directory name, and a mode, attempt to create it.
