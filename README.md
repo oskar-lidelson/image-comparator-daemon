@@ -1,16 +1,27 @@
+# -2. Architecture Overview
+
+Here's the world's worst diagram:
+
+![](worlds-worst-diagram.png)
+
 # -1. Usage
 
 This service by default creates a /mnt/image-comparator/ directory.
 
-In that directory is a config.incoming subdir. Drop your csv input files in there, and the service will pick them up automatically within 10 seconds.
+In that directory is a config.incoming subdir. 
 
-Once it's found, your csv file will be moved to the
-'config.processing' subdir after all tasks have been distributed to
-the worker nodes.
+Place your input CSV files in there, and the service will pick them up
+automatically within 10 seconds.
 
-After task completion, the csv file is moved to 'config.processed',
-and you can find your output file with the results in the 'output'
-subdirectory.
+While processing, your csv file will be moved to the
+'config.processing' subdirectory.
+
+Tasks are automatically created, distributed to the worker nodes, and
+collected after completion.
+
+Once done, your CSV file is moved to the 'config.processed'
+subdirectory and results are compiled into a CSV file with a matching
+name in the 'output' subdirectory.
 
 # 0. Installation and Setup (Master)
 
