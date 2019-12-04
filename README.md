@@ -4,6 +4,17 @@ Here's the world's worst diagram:
 
 ![](worlds-worst-diagram.png)
 
+By default, the system looks for config files:
+
+/etc/image-comparator.lisp
+and
+/etc/image-comparator-worker.lisp
+
+Within these config files, it expects to find structure definitions
+matching the config struct declarations in src/shared.lisp
+
+You can also copy the sample configs and edit those. They're in the 'conf' subdirectory of this repository.
+
 # -1. Usage
 
 This service by default creates a /mnt/image-comparator/ directory.
