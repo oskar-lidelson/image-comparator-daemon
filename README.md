@@ -8,7 +8,9 @@ Once it's found, your csv file will be moved to the
 'config.processing' subdir after all tasks have been distributed to
 the worker nodes.
 
-
+After task completion, the csv file is moved to 'config.processed',
+and you can find your output file with the results in the 'output'
+subdirectory.
 
 # 0. Installation and Setup (Master)
 
