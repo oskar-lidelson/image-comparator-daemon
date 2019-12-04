@@ -136,34 +136,6 @@
    It's better to have a simple config and a slightly less elegant codebase."
   (format nil "http://~a:~a" (worker-descriptor-hostname worker) (worker-descriptor-port worker)))
 
-(defun file-exists (filename)
-  "Returns non-NIL if file exists."
-  (probe-file (pathname filename)))
-(defun file-doesnt-exist (filename)
-  "Shorthand."
-  (not (file-exists (pathname filename))))
-
-(defun generate-task-uid (&key (num-digits 20))
-  "Generate a sensible UID which can be natively handled as an integer in Lisp"
-  ;;It's important to use 10 here as the base so that it stays in integer-land.
-  (write-to-string (random (expt 10 num-digits))))
-
-(defun incoming-subdir-wildcard (&key (file-type "csv"))
-  "Construct the wildcard path which globs to all incoming config files of the specified file type.
-   ie. The default value for this should look something like /mnt/.../config.incoming/*.csv"
-  (format nil "~a/~a/*.~a"
-	  (config-root-directory *config*)
-	  (config-config-incoming-subdir *config*)
-	  file-type))
-
-(defun basename (path)
-  "Emulates the UNIX basename command. (basename(/tmp/x/y) => y)"
-  (format nil "~a~a~a"
-	  (pathname-name path)
-	  (if (pathname-type path) "." "")
-	  (if (pathname-type path)
-	      (pathname-type path) "")))
-
 (defun move-config-file-to-processing-dir (config-file-name)
   "Given a config-file-name (absolute path) (one of the incoming configs), 
 
@@ -200,26 +172,6 @@
   (workload-has-completed-all-tasks
    db
    (get-associated-workload-id-for-task db task-uid)))
-
-;;ToDo: Create generalized task class which auto-generates the ID and stores it in Sqlite database.
-;;ToDo: Create generalized worker class which can accept a Task instance. 
-(defun push-task-to-worker (worker image-pair-i task-id)
-  "Given a worker from the config, and an image pair from the incoming csv, push this task over the network."
-  (let ((task-push-URL (format nil "http://~a/image-comparator/task" (worker-to-uri worker))))
-    (handler-case
-	;;Make an HTTP request to the worker endpoint and push the details of this task over.
-	(drakma:http-request task-push-url
-			     :method :post
-			     :parameters
-			     (list
-			      (cons "auth-token" "ToDo")
-			      (cons "task-id" task-id)
-			      ;;Additional parameters from the csv file are also passed:
-			      (cons "image-filename-pair" (format nil "~S" image-pair-i))))
-      (error (e)
-	(format nil "Failed to push task to worker: ~A~%" e)
-	;;ToDo: Mark task as unpushed in database.
-	nil))))
 
 (defun check-config-line-validity (image-pair-i config-file-name)
   "Given a row from the incoming config file, check that it's valid.
