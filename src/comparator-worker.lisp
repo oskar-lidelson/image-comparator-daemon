@@ -72,14 +72,14 @@
 
   ;;Wait up to ten seconds to open this database, since it might be open in the HTTP server thread, reporting status:
   (handler-case
-      (sqlite:with-open-database (db (get-db-path) :busy-timeout (* 10 1000))
+      (sqlite:with-open-database (db (get-worker-db) :busy-timeout (* 10 1000))
 	(sqlite:execute-non-query
 	 db
 	 "insert into tasks (associated_workload, uid, image_a, image_b) values(?,?,?,?)"
 	 (task-descriptor-associated-workload-id task)
 	 (task-descriptor-uid task)
-	 (write-to-string (task-descriptor-image-a task))
-	 (write-to-string (task-descriptor-image-b task)))
+	 (task-descriptor-image-a task)
+	 (task-descriptor-image-b task))
 	task)
 
     (T (error)
@@ -104,35 +104,35 @@
      :default-request-type :post)
     ;;Extract parameters from the POST data:
     ((auth-key         :request-type :post)
-     (task             :request-type :post))
-
-  (debug-print "Received task: ~a" task)
-
-  ;;ToDo: When auth-key is valid, ...
+     (task             :request-type :post :parameter-type 'string))
+  (in-package :image-comparator)
 
   (handler-case 
-      (let ((task-in (with-input-from-string (stream task) (read stream))))
+      (let ((task-in (read-from-string task)))
 	;;Push the task to the database:
-	(store-task-in-database task-in))
+	(store-task-in-database task-in)
+	;;Return success.
+	"1")
     (T (error)
       (log-error (format nil "Failed to parse incoming task: ~A~%" error)))))
 
 (defun find-next-waiting-task ()
   "Read the database and find the next task in the queue"
   (handler-case
-      (sqlite:with-open-database (db (get-db-path) :busy-timeout (* 10 1000))
-	(let ((row (sqlite:execute-single "select * from tasks where state = 'waiting' limit 1")))
-	  (let ((id (first row))
-		(associated-workload-id (second row))
-		(uid (third row))
-		(image-a (fourth row))
-		(image-b (fifth row)))
-	    ;;Generate a task:
-	    (make-task-descriptor
-	     :uid uid
-	     :associated-workload-id associated-workload-id
-	     :image-a image-a
-	     :image-b image-b))))
+      (sqlite:with-open-database (db (get-worker-db) :busy-timeout (* 10 1000))
+	(let ((row (first (sqlite:execute-to-list db "select * from tasks where state = 'waiting' limit 1"))))
+	  (when row
+	    (let ((id (first row))
+		  (associated-workload-id (second row))
+		  (uid (third row))
+		  (image-a (fourth row))
+		  (image-b (fifth row)))
+	      ;;Generate a task:
+	      (make-task-descriptor
+	       :uid uid
+	       :associated-workload-id associated-workload-id
+	       :image-a image-a
+	       :image-b image-b)))))
     (T (error)
       (log-error (format nil "Unhandled error fetching next waiting task: ~A~%" error))
       nil)))
@@ -211,14 +211,15 @@
 		       (list
 			(cons "auth-token" "ToDo")
 			;;Push the task over wholesale.
-			(cons "task-uid" (format nil "~S" (task-descriptor-uid task)))
-			(cons "similarity-score" (format nil "~A" (float score)))
-			(cons "elapsed-time" (format nil "~A" (float elapsed-time)))
+			(cons "task-uid" (task-descriptor-uid task))
+			(cons "similarity-score"  (write-to-string (float score)))
+			(cons "elapsed-time"  (write-to-string (float elapsed-time)))
 			;;ToDo: Fill this in if it exists.
-			(cons "error-message" ""))))
+			;;(cons "error-message" "")
+			)))
 
 (defun delete-task-from-database (task)
-  (sqlite:with-open-database (db (get-db-path) :busy-timeout (* 10 1000))
+  (sqlite:with-open-database (db (get-worker-db) :busy-timeout (* 10 1000))
     (sqlite:execute-non-query
      db
      "delete from tasks where uid = ?"
@@ -233,21 +234,22 @@
 	(when task
 	  ;;ToDo: Start benchmark timer. (start-time = now())
 	  (let ((begin-time (get-internal-real-time)))
-	    (debug-print "Operating on task: ~A~%" task)
+	    (debug-print "Operating on task: ~S~%" task)
 
 	    ;;Step 1: Convert both sides to PNG:
 	  ;;;ToDo: 'convert' binary path should be in the config.
+	    (debug-print "Attempting to convert both images to PNG format..~%")
 	    (sb-ext:run-program "/usr/bin/convert" (list (task-descriptor-image-a task) "/tmp/image-a.png")
-				:wait T)
+				:output T :error T :wait T)
 	    (sb-ext:run-program "/usr/bin/convert" (list (task-descriptor-image-b task) "/tmp/image-b.png")
-				:wait T)
+				:output T :error T :wait T)
 
 	    ;;ToDo: Resize both images to be identical.
 
 	    (let* ((score (calculate-similarity-score "/tmp/image-a.png" "/tmp/image-b.png"))
 		   (end-time (get-internal-real-time))
 		   (elapsed-time (- end-time begin-time)))
-	      (debug-print "score: ~A~%" score)
+	      (debug-print "score: ~A~%" (float score))
 
 	      ;;ToDo: End benchmark timer: (end-time = now(), elapsed = end-time - start-time).
 
@@ -266,7 +268,9 @@
   (setup-database)
   (start-webserver)
   ;;Put this thread to sleep forever:
-  (loop do (sleep 1)))
+  (loop do
+    (sleep 1)
+    (operate-on-next-available-task)))
 
 ;;====================
 ;;Actual entrypoint
