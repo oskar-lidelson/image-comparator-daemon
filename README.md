@@ -1,20 +1,38 @@
-# 0. Installation and Setup
+# -1. Usage
+
+This service by default creates a /mnt/image-comparator/ directory.
+
+In that directory is a config.incoming subdir. Drop your csv input files in there, and the service will pick them up automatically within 10 seconds.
+
+Once it's found, your csv file will be moved to the
+'config.processing' subdir after all tasks have been distributed to
+the worker nodes.
+
+
+
+# 0. Installation and Setup (Master)
 
 There's a makefile included which will automatically attempt to
 install all required dependencies.
 
-But if you prefer to do it manually: 
+Just do $ make install
 
-$ sudo make install-sbcl (Needs root privileges)
+This will:
 
-This calls apt-get or dnf to install sbcl. That's the only dependency.
+* Install quicklisp, sbcl, imagemagick, 
+* create /usr/share/... directories
+* create /mnt/... directories (only the top level, the code does the rest at startup)
+* Install the systemd service file 
+* Enable the systemd service
+* Run the service
 
-$ make install-quicklisp (Does not need root privileges)
+## 0.1 Installation and Setup (Worker Node)
 
-This first part installs quicklisp, which is essentially the lisp
-package management system. It has a dependency on install-sbcl, but if
-you run that first, it won't run.
+Using the Makefile, do $ make install-worker
 
+Most of the code is the same, since the system attempts to distribute
+all master+server code to all nodes. The only difference is that on
+worker nodes, the server hasn't been enabled.
 
 # 1. My Thought Process
 
