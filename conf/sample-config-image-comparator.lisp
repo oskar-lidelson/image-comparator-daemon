@@ -30,9 +30,11 @@
    ;;The default config assumes we have only one worker on the same host.
    :workers (list
 	     (make-worker-descriptor
-	      :hostname "localhost")
+	      :hostname "localhost"
+	      :port *default-worker-port*)
 	     (make-worker-descriptor
-	      :hsotname "localhost"))
+	      :hostname "localhost"
+	      :port *default-worker-port*))
 
    :debug-mode T)
   )
