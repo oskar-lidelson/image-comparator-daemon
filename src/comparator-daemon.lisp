@@ -151,6 +151,21 @@
       (T (error)
 	(log-error (format nil "Failed to rename '~a' to '~a': ~a~%" source dest error))))))
 
+(defun move-config-file-to-processed-dir (config-file-name)
+  "Given a config-file-name (absolute path) (one of the incoming configs), 
+
+   move it wholesale into the processing subdir."
+  (let ((source config-file-name)
+	(dest (format nil "~A/~A/~A"
+		      (config-root-directory *config*)
+		      (config-config-processed-subdir *config*)
+		      (basename config-file-name))))
+    (format t "Moving ~a to ~A~%" source dest)
+    (handler-case
+	(sb-posix:rename source dest)
+      (T (error)
+	(log-error (format nil "Failed to rename '~a' to '~a': ~a~%" source dest error))))))
+
 (defun set-task-status-to-done (db task-uid similarity-score elapsed-time)
   (let ((result (sqlite:execute-to-list
 		 db
@@ -302,6 +317,14 @@
 		  "select image_a, image_b, similarity_score, elapsed_time from tasks where associated_workload = ?"
 		  workload-id)))
       (debug-print "Finished Tasks: ~A~%" tasks)
+      ;;Copy config file to processed:
+      (let ((processing-filename
+	      (format nil "~a/~a/~a"
+		      (config-root-directory *config*)
+		      (config-config-processing-subdir *config*)
+		      (basename output-csv-filename))))
+	(move-config-file-to-processed-dir processing-filename))
+      
       (with-open-file (stream output-csv-filename :direction :output :if-exists :supersede :if-does-not-exist :create)
 	(format stream "image1, image2, similar, elapsed~%");;Headings.
 	(dolist (task-i tasks)
@@ -320,7 +343,7 @@
      db
      "insert into workloads (incoming_config_file_name, outgoing_results_file_name) values(?,?)"
      (write-to-string config-file-name) ;;incoming config file name 
-     (format nil "~A/~A/~A.out.csv"
+     (format nil "~A/~A/~A"
 	     (config-root-directory *config*)
 	     (config-output-subdir *config*)
 	     (basename config-file-name)) ;;outgoing config file name. It's saved with .out.csv appended.
