@@ -6,7 +6,7 @@ After=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=/usr/share/image-comparator-daemon
-ExecStart=/usr/bin/bash -c './comparator-daemon.lisp'
+ExecStart=/usr/bin/bash -c './comparator-daemon.lisp &> /usr/share/image-comparator-daemon/output.log'
 RestartSec=3
 Restart=always
 User=image-comparator-daemon
