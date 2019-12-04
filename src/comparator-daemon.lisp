@@ -152,18 +152,19 @@
 	(log-error (format nil "Failed to rename '~a' to '~a': ~a~%" source dest error))))))
 
 (defun set-task-status-to-done (db task-uid similarity-score elapsed-time)
-  (sqlite:execute-non-query
-   db
-   "update tasks set state='done' and similarity_score = ? and elapsed_time = ? where uid='?'"
-   similarity-score
-   elapsed-time
-   task-uid))
+  (let ((result (sqlite:execute-to-list
+		 db
+		 "update tasks set state='done', similarity_score = ?, elapsed_time = ? where uid = ?"
+		 similarity-score
+		 elapsed-time
+		 task-uid)))
+    (format t "Result of that: update tasks set state='done' and similarity_score = ~A and elapsed_time = ~A where uid = ~A~%" similarity-score elapsed-time task-uid)))
 
 (defun get-associated-workload-id-for-task (db task-uid)
   (sqlite:execute-single db "select associated_workload from tasks where uid = ?" task-uid))
 
 (defun count-unfinished-tasks-for-workload (db workload-id)
-  (sqlite:execute-single db "select count(id) from tasks where associated_workload = ?" workload-id))
+  (sqlite:execute-single db "select count(id) from tasks where associated_workload = ? and state != 'done'" workload-id))
 
 (defun workload-has-completed-all-tasks (db workload-id)
   (= 0 (count-unfinished-tasks-for-workload db workload-id)))
@@ -210,7 +211,7 @@
   ;;If control reaches this function, it means that the handler-case hadn't unwound and skipped it.
   ;;That means there wasn't any serious error (connection failed, etc.)
   (debug-print "Task pushed to worker. Attempting to mark it as in-progress in database.~%")
-  (format T "Result: ~A~%" http-post-result)
+  (debug-print "Result: ~A~%" http-post-result)
   ;;;ToDo.
   )
 
@@ -230,7 +231,7 @@
 			      (list
 			       (cons "auth-token" "ToDo")
 			       ;;Push the task over wholesale.
-			       (cons "task" (format nil "~S" task)))))
+			       (cons "task" (write-to-string task)))))
       (t (error)
 	(format T "Failed to push task to worker (~A): ~A~%" task-push-url error)
 	nil))))
@@ -265,6 +266,7 @@
    This task is assigned to workload with database ID given by workload-id."
   ;;First, generate a new ID for this task.
   (let ((id (generate-task-uid)))
+    (debug-print "Generated task with uid: ~a~%" id)
     (make-task-descriptor :uid id :image-a (first config-line) :image-b (second config-line)
 			  :associated-workload-id workload-id
 			  ;;What port to use when attempting to connect back to report results.
@@ -292,8 +294,20 @@
 
    * Copy the config file into the archival directory from the processing directory.
    * Find all of the tasks and write their timings and similarity scores out to the output file."
-  
-  )
+  (sqlite:with-open-database (db (get-db-path) :busy-timeout (* 10 1000))
+    (let ((output-csv-filename
+	    (sqlite:execute-single db "select outgoing_results_file_name from workloads where id = ?" workload-id))
+	  (tasks (sqlite:execute-to-list
+		  db
+		  "select image_a, image_b, similarity_score, elapsed_time from tasks where associated_workload = ?"
+		  workload-id)))
+      (debug-print "Finished Tasks: ~A~%" tasks)
+      (with-open-file (stream output-csv-filename :direction :output :if-exists :supersede :if-does-not-exist :create)
+	(format stream "image1, image2, similar, elapsed~%");;Headings.
+	(dolist (task-i tasks)
+	  (format stream "~a, ~a, ~,4F, ~,4F~%"
+		  (first task-i) (second task-i)
+		  (third task-i) (fourth task-i)))))))
 
 
 (defun create-new-workload (config-file-name)
@@ -306,7 +320,10 @@
      db
      "insert into workloads (incoming_config_file_name, outgoing_results_file_name) values(?,?)"
      (write-to-string config-file-name) ;;incoming config file name 
-     (format nil "~A.out.csv" config-file-name) ;;outgoing config file name. It's saved with .out.csv appended.
+     (format nil "~A/~A/~A.out.csv"
+	     (config-root-directory *config*)
+	     (config-output-subdir *config*)
+	     (basename config-file-name)) ;;outgoing config file name. It's saved with .out.csv appended.
      )
     (sqlite:execute-single db "select last_insert_rowid()")))
 
@@ -376,7 +393,7 @@
      :default-request-type :post)
     ;;Extract parameters from the POST data:
     ((auth-key         :request-type :post);;ToDo.
-     (task-uid         :request-type :post)
+     (task-uid         :parameter-type 'string :request-type :post)
      (similarity-score :request-type :post)
      (elapsed-time     :request-type :post)
      (error-message    :request-type :post))
@@ -391,19 +408,22 @@
   (when task-uid
     (sqlite:with-open-database (db (get-db-path) :busy-timeout (* 10 1000))
       ;;Determine if there was an error:
-      (when error-message
+      (when (and error-message (> (length error-message) 0))
 	(log-error (format nil "Task with uid ~a reported error ~a.~%" task-uid error-message)))
 
       ;;If there wasn't an error, carry on:
       (unless error-message
 	;;Update this task's state and set it to 'done':
-	(set-task-status-to-done db task-uid similarity-score elapsed-time)
-
+	(set-task-status-to-done db task-uid
+				 (read-from-string similarity-score)
+				 (read-from-string elapsed-time))
+	(format T "Task set status to done for task ~a.~%" task-uid)
 	;;Determine if there are any tasks left for the associated workload.
 	(when (associated-workload-has-completed-all-tasks db task-uid)
+	  (debug-print "Associated workload has completed all tasks.~%")
 	  ;;Finally, copy the config file to the archival directory and begin writing the output.
 	  ;;I know that this function is called twice (get-associa...) but I don't mind the slight overhead for a little cleaner code.
-	  (finish-workload db (get-associated-workload-id-for-task task-uid)))))))
+	  (finish-workload db (get-associated-workload-id-for-task db task-uid)))))))
 
 (defun main ()
   (debug-print "Main entrypoint.~%")
