@@ -217,6 +217,13 @@
 			;;ToDo: Fill this in if it exists.
 			(cons "error-message" ""))))
 
+(defun delete-task-from-database (task)
+  (sqlite:with-open-database (db (get-db-path) :busy-timeout (* 10 1000))
+    (sqlite:execute-non-query
+     db
+     "delete from tasks where uid = ?"
+     (task-descriptor-uid task))))
+
 (defun operate-on-next-available-task ()
   ;;Find the next waiting task:
 
@@ -245,7 +252,10 @@
 	      ;;ToDo: End benchmark timer: (end-time = now(), elapsed = end-time - start-time).
 
 	      ;;Now, we need to call back to the master and tell them what we've found:
-	      (notify-master-of-successful-compare task score elapsed-time))))
+	      (notify-master-of-successful-compare task score elapsed-time)
+
+	      ;;Finally, delete this task from the database:
+	      (delete-task-from-database task))))
       
       (T (error)
 	(log-error (format nil "Unhandled error operating on task: ~A~%" error))))))
