@@ -4,7 +4,9 @@
 quicklisp_url="https://beta.quicklisp.org/quicklisp.lisp"
 quicklisp_install_script='(progn () (quicklisp-quickstart:install :path "quicklisp.tmp")(exit))'
 
-all: install-quicklisp create-user install-code install-systemd-config create-directories
+all:
+
+install: install-quicklisp create-user install-code install-systemd-config create-directories
 
 #========================================
 #INSTALLATION
